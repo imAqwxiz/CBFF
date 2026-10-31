@@ -1,100 +1,321 @@
-/**
- * Include the Geode headers.
- */
-#include <Geode/Geode.hpp>
 
-/**
- * Brings cocos2d and all Geode namespaces to the current scope.
- */
+#include <Geode/Geode.hpp>
+#include <Geode/modify/MenuLayer.hpp>
+
 using namespace geode::prelude;
 
-/**
- * `$modify` lets you extend and modify GD's classes.
- * To hook a function in Geode, simply $modify the class
- * and write a new function definition with the signature of
- * the function you want to hook.
- *
- * Here we use the overloaded `$modify` macro to set our own class name,
- * so that we can use it for button callbacks.
- *
- * Notice the header being included, you *must* include the header for
- * the class you are modifying, or you will get a compile error.
- *
- * Another way you could do this is like this:
- *
- * struct MyMenuLayer : Modify<MyMenuLayer, MenuLayer> {};
- */
-#include <Geode/modify/MenuLayer.hpp>
-class $modify(MyMenuLayer, MenuLayer) {
-	/**
-	 * Typically classes in GD are initialized using the `init` function, (though not always!),
-	 * so here we use it to add our own button to the bottom menu.
-	 *
-	 * Note that for all hooks, your signature has to *match exactly*,
-	 * `void init()` would not place a hook!
-	*/
-	bool init() {
-		/**
-		 * We call the original init function so that the
-		 * original class is properly initialized.
-		 */
-		if (!MenuLayer::init()) {
-			return false;
-		}
+// ==========================================
+// CBFF STATE
+// ==========================================
 
-		/**
-		 * You can use methods from the `geode::log` namespace to log messages to the console,
-		 * being useful for debugging and such. See this page for more info about logging:
-		 * https://docs.geode-sdk.org/tutorials/logging
-		*/
-		log::debug("Hello from my MenuLayer::init hook! This layer has {} children.", this->getChildrenCount());
+static bool g_enabled = true;
+static std::string g_preset = "Balanced";
+static std::string g_gamemode = "All";
 
-		/**
-		 * See this page for more info about buttons
-		 * https://docs.geode-sdk.org/tutorials/buttons
-		*/
-		auto myButton = CCMenuItemSpriteExtra::create(
-			CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png"),
-			this,
-			/**
-			 * Here we use the name we set earlier for our modify class.
-			*/
-			menu_selector(MyMenuLayer::onMyButton)
-		);
+// ==========================================
+// CBFF MENU
+// ==========================================
 
-		/**
-		 * Here we access the `bottom-menu` node by its ID, and add our button to it.
-		 * Node IDs are a Geode feature, see this page for more info about it:
-		 * https://docs.geode-sdk.org/tutorials/nodetree
-		*/
-		auto menu = this->getChildByID("bottom-menu");
-		menu->addChild(myButton);
+class CBFFLayer : public CCLayerColor {
+protected:
+    CCLabelBMFont* m_status = nullptr;
 
-		/**
-		 * The `_spr` string literal operator just prefixes the string with
-		 * your mod id followed by a slash. This is good practice for setting your own node ids.
-		*/
-		myButton->setID("my-button"_spr);
+    void addTextButton(
+        const char* text,
+        SEL_MenuHandler callback,
+        float x,
+        float y,
+        float scale = 0.42f
+    ) {
+        auto label = CCLabelBMFont::create(
+            text,
+            "bigFont.fnt"
+        );
 
-		/**
-		 * We update the layout of the menu to ensure that our button is properly placed.
-		 * This is yet another Geode feature, see this page for more info about it:
-		 * https://docs.geode-sdk.org/tutorials/layouts
-		*/
-		menu->updateLayout();
+        label->setScale(scale);
 
-		/**
-		 * We return `true` to indicate that the class was properly initialized.
-		 */
-		return true;
-	}
+        auto item = CCMenuItemLabel::create(
+            label,
+            this,
+            callback
+        );
 
-	/**
-	 * This is the callback function for the button we created earlier.
-	 * The signature for button callbacks must always be the same,
-	 * return type `void` and taking a `CCObject*`.
-	*/
-	void onMyButton(CCObject*) {
-		FLAlertLayer::create("Geode", "Hello from my custom mod!", "OK")->show();
-	}
+        auto menu = CCMenu::create(item, nullptr);
+        menu->setPosition({x, y});
+
+        this->addChild(menu);
+    }
+
+    void updateStatus(const std::string& text) {
+        if (m_status) {
+            m_status->setString(text.c_str());
+        }
+    }
+
+    void selectPreset(const std::string& preset) {
+        g_preset = preset;
+
+        updateStatus(
+            ("Selected preset: " + preset).c_str()
+        );
+    }
+
+public:
+
+    static CBFFLayer* create() {
+        auto ret = new CBFFLayer();
+
+        if (ret && ret->init()) {
+            ret->autorelease();
+            return ret;
+        }
+
+        CC_SAFE_DELETE(ret);
+        return nullptr;
+    }
+
+    bool init() override {
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
+
+        if (!CCLayerColor::initWithColor(
+            ccc4(0, 0, 0, 175)
+        )) {
+            return false;
+        }
+
+        this->setContentSize(winSize);
+
+        // Main panel
+        float panelW = std::min(440.f, winSize.width - 24.f);
+        float panelH = std::min(310.f, winSize.height - 24.f);
+
+        auto panel = CCLayerColor::create(
+            ccc4(20, 35, 59, 250),
+            panelW,
+            panelH
+        );
+
+        panel->setPosition({
+            (winSize.width - panelW) / 2.f,
+            (winSize.height - panelH) / 2.f
+        });
+
+        this->addChild(panel);
+
+        float center = panelW / 2.f;
+
+        // Header
+        auto title = CCLabelBMFont::create(
+            "CBFF",
+            "goldFont.fnt"
+        );
+
+        title->setScale(0.9f);
+        title->setPosition({center, panelH - 30.f});
+        panel->addChild(title);
+
+        auto subtitle = CCLabelBMFont::create(
+            "Click beFore FRAMES",
+            "bigFont.fnt"
+        );
+
+        subtitle->setScale(0.35f);
+        subtitle->setPosition({center, panelH - 52.f});
+        panel->addChild(subtitle);
+
+        // Status
+        m_status = CCLabelBMFont::create(
+            "Selected preset: Balanced",
+            "bigFont.fnt"
+        );
+
+        m_status->setScale(0.38f);
+        m_status->setPosition({center, panelH - 82.f});
+        panel->addChild(m_status);
+
+        // Enable / Disable
+        addTextButton(
+            g_enabled ? "CBFF: ON" : "CBFF: OFF",
+            menu_selector(CBFFLayer::onToggle),
+            center,
+            panelH - 112.f
+        );
+
+        // Presets
+        auto presetTitle = CCLabelBMFont::create(
+            "PRESETS",
+            "bigFont.fnt"
+        );
+
+        presetTitle->setScale(0.45f);
+        presetTitle->setPosition({center, panelH - 145.f});
+        panel->addChild(presetTitle);
+
+        float left = panelW * 0.28f;
+        float right = panelW * 0.72f;
+
+        addTextButton(
+            "AGGRESSIVE",
+            menu_selector(CBFFLayer::onAggressive),
+            left,
+            panelH - 178.f
+        );
+
+        addTextButton(
+            "BALANCED",
+            menu_selector(CBFFLayer::onBalanced),
+            right,
+            panelH - 178.f
+        );
+
+        addTextButton(
+            "SAFE",
+            menu_selector(CBFFLayer::onSafe),
+            left,
+            panelH - 208.f
+        );
+
+        addTextButton(
+            "GD GOD",
+            menu_selector(CBFFLayer::onGod),
+            right,
+            panelH - 208.f
+        );
+
+        addTextButton(
+            "OBVIOUS CHEATING",
+            menu_selector(CBFFLayer::onCheating),
+            center,
+            panelH - 238.f,
+            0.36f
+        );
+
+        // Configuration buttons
+        addTextButton(
+            "CUSTOMIZE ALL",
+            menu_selector(CBFFLayer::onCustomizeAll),
+            left,
+            32.f,
+            0.36f
+        );
+
+        addTextButton(
+            "GAMEMODES",
+            menu_selector(CBFFLayer::onGamemodes),
+            right,
+            32.f,
+            0.36f
+        );
+
+        // Close button
+        addTextButton(
+            "CLOSE",
+            menu_selector(CBFFLayer::onClose),
+            center,
+            10.f,
+            0.38f
+        );
+
+        return true;
+    }
+
+    // ======================================
+    // BUTTON CALLBACKS
+    // ======================================
+
+    void onToggle(CCObject*) {
+        g_enabled = !g_enabled;
+
+        updateStatus(
+            g_enabled ? "CBFF enabled" : "CBFF disabled"
+        );
+    }
+
+    void onAggressive(CCObject*) {
+        selectPreset("Aggressive");
+    }
+
+    void onBalanced(CCObject*) {
+        selectPreset("Balanced");
+    }
+
+    void onSafe(CCObject*) {
+        selectPreset("Safe");
+    }
+
+    void onGod(CCObject*) {
+        selectPreset("Genuine GD God");
+    }
+
+    void onCheating(CCObject*) {
+        selectPreset("Obvious Cheating");
+    }
+
+    void onCustomizeAll(CCObject*) {
+        g_gamemode = "All";
+        updateStatus("Editing: All gamemodes");
+    }
+
+    void onGamemodes(CCObject*) {
+        updateStatus("Gamemode configuration selected");
+    }
+
+    void onClose(CCObject*) {
+        this->removeFromParentAndCleanup(true);
+    }
 };
+
+// ==========================================
+// MAIN MENU INTEGRATION
+// ==========================================
+
+class $modify(CBFFMenuLayer, MenuLayer) {
+
+    bool init() {
+        if (!MenuLayer::init()) {
+            return false;
+        }
+
+        auto bottomMenu = this->getChildByID(
+            "bottom-menu"
+        );
+
+        if (bottomMenu) {
+            auto label = CCLabelBMFont::create(
+                "CBFF",
+                "goldFont.fnt"
+            );
+
+            label->setScale(0.45f);
+
+            auto button = CCMenuItemLabel::create(
+                label,
+                this,
+                menu_selector(CBFFMenuLayer::onOpen)
+            );
+
+            button->setID("cbff-open-button"_spr);
+
+            bottomMenu->addChild(button);
+            bottomMenu->updateLayout();
+        }
+
+        log::info("CBFF initialized.");
+
+        return true;
+    }
+
+    void onOpen(CCObject*) {
+        auto scene = CCDirector::sharedDirector()
+            ->getRunningScene();
+
+        if (!scene) return;
+
+        auto menu = CBFFLayer::create();
+
+        if (menu) {
+            scene->addChild(menu, 999);
+        }
+    }
+};
+
