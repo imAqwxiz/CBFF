@@ -11,7 +11,7 @@ static constexpr PresetId kPresetOrder[4] = {PresetId::Safe, PresetId::Balanced,
 
 CBFFMenu* CBFFMenu::create() {
     auto ret = new CBFFMenu();
-    if (ret->initAnchored(400.f, 300.f, "GJ_square01.png")) {
+    if (ret->init()) {
         ret->autorelease();
         return ret;
     }
@@ -19,7 +19,9 @@ CBFFMenu* CBFFMenu::create() {
     return nullptr;
 }
 
-bool CBFFMenu::setup() {
+bool CBFFMenu::init() {
+    if (!Popup::init(400.f, 300.f, "GJ_square01.png")) return false;
+
     this->setTitle("CBFF Input Buffer", "goldFont.fnt", 0.8f, 22.f);
 
     auto addLabel = [&](char const* text, float x, float y, float scale, bool leftAlign = false) {

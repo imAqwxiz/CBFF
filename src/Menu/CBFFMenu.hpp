@@ -3,12 +3,12 @@
 #include "../Core/CBFFTypes.hpp"
 
 // Main CBFF menu: presets, master switch, per-mode frame windows.
-class CBFFMenu : public geode::Popup<> {
+class CBFFMenu : public geode::Popup {
 public:
     static CBFFMenu* create();
 
 protected:
-    bool setup() override;
+    bool init();
     void refresh();
 
     void onPreset(cocos2d::CCObject*);

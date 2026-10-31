@@ -37,10 +37,10 @@ class $modify(CBFFPauseLayer, PauseLayer) {
             menu->updateLayout();
         } else {
             auto win = CCDirector::get()->getWinSize();
-            auto menu = CCMenu::create();
-            menu->addChild(btn);
-            menu->setPosition({win.width - 30.f, 30.f});
-            this->addChild(menu);
+            auto fallback = CCMenu::create();
+            fallback->addChild(btn);
+            fallback->setPosition({win.width - 30.f, 30.f});
+            this->addChild(fallback);
         }
     }
     void onCBFF(CCObject*) { CBFFMenu::create()->show(); }

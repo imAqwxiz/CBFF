@@ -4,12 +4,12 @@
 
 // Shows tracked stats per mode and the tuner's recommendations.
 // Nothing here changes by itself: a value only changes when you tap Apply.
-class CBFFTunePopup : public geode::Popup<> {
+class CBFFTunePopup : public geode::Popup {
 public:
     static CBFFTunePopup* create();
 
 protected:
-    bool setup() override;
+    bool init();
     void rebuild();
     void onApply(cocos2d::CCObject*);    // tag = mode index
     void onApplyAll(cocos2d::CCObject*);

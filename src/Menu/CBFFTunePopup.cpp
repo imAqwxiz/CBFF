@@ -8,7 +8,7 @@ using namespace cbff;
 
 CBFFTunePopup* CBFFTunePopup::create() {
     auto ret = new CBFFTunePopup();
-    if (ret->initAnchored(440.f, 290.f, "GJ_square02.png")) {
+    if (ret->init()) {
         ret->autorelease();
         return ret;
     }
@@ -16,7 +16,9 @@ CBFFTunePopup* CBFFTunePopup::create() {
     return nullptr;
 }
 
-bool CBFFTunePopup::setup() {
+bool CBFFTunePopup::init() {
+    if (!Popup::init(440.f, 290.f, "GJ_square02.png")) return false;
+
     this->setTitle("Stats & Tuning", "goldFont.fnt", 0.8f, 22.f);
 
     auto hint = CCLabelBMFont::create("Suggestions only - nothing changes unless you tap Apply", "chatFont.fnt");
