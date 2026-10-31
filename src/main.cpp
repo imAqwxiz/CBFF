@@ -16,14 +16,10 @@ static std::string g_gamemode = "All";
 // CBFF POPUP
 // ==========================================
 
-class CBFFLayer : public Popup<> {
+class CBFFLayer : public geode::Popup {
 protected:
     CCLabelBMFont* m_status = nullptr;
     CCMenu* m_buttonMenu = nullptr;
-
-    // --------------------------------------
-    // BUTTON CREATION
-    // --------------------------------------
 
     void addButton(
         const char* text,
@@ -52,10 +48,6 @@ protected:
         m_buttonMenu->addChild(button);
     }
 
-    // --------------------------------------
-    // STATUS
-    // --------------------------------------
-
     void updateStatus(const std::string& text) {
         if (m_status) {
             m_status->setString(text.c_str());
@@ -64,65 +56,36 @@ protected:
 
     void selectPreset(const std::string& preset) {
         g_preset = preset;
-
-        updateStatus(
-            ("Active preset: " + preset).c_str()
-        );
+        updateStatus("Active preset: " + preset);
     }
 
-public:
-
-    static CBFFLayer* create() {
-        auto ret = new CBFFLayer();
-
-        if (ret && ret->init(360.f, 260.f)) {
-            ret->autorelease();
-            return ret;
+    bool init() {
+        if (!geode::Popup::init(360.f, 260.f)) {
+            return false;
         }
-
-        CC_SAFE_DELETE(ret);
-        return nullptr;
-    }
-
-    // ======================================
-    // POPUP INITIALIZATION
-    // ======================================
-
-    bool setup() override {
 
         this->setTitle("CBFF");
 
         auto size = m_mainLayer->getContentSize();
-
         const float centerX = size.width / 2.f;
 
-        // Main button menu
         m_buttonMenu = CCMenu::create();
         m_buttonMenu->setPosition({0.f, 0.f});
-
         m_mainLayer->addChild(m_buttonMenu);
 
-        // ----------------------------------
         // STATUS
-        // ----------------------------------
-
         m_status = CCLabelBMFont::create(
             "Active preset: Balanced",
             "bigFont.fnt"
         );
-
         m_status->setScale(0.42f);
         m_status->setPosition({
             centerX,
             size.height - 48.f
         });
-
         m_mainLayer->addChild(m_status);
 
-        // ----------------------------------
-        // ENABLE / DISABLE
-        // ----------------------------------
-
+        // ENABLE
         addButton(
             g_enabled ? "CBFF: ON" : "CBFF: OFF",
             menu_selector(CBFFLayer::onToggle),
@@ -131,27 +94,19 @@ public:
             110.f
         );
 
-        // ----------------------------------
         // PRESETS HEADER
-        // ----------------------------------
-
         auto presetLabel = CCLabelBMFont::create(
             "PRESETS",
             "goldFont.fnt"
         );
-
         presetLabel->setScale(0.55f);
         presetLabel->setPosition({
             centerX,
             size.height - 113.f
         });
-
         m_mainLayer->addChild(presetLabel);
 
-        // ----------------------------------
         // PRESET BUTTONS
-        // ----------------------------------
-
         const float leftX = centerX - 82.f;
         const float rightX = centerX + 82.f;
 
@@ -191,10 +146,7 @@ public:
             165.f
         );
 
-        // ----------------------------------
         // CONFIGURATION
-        // ----------------------------------
-
         addButton(
             "CUSTOMIZE ALL",
             menu_selector(CBFFLayer::onCustomizeAll),
@@ -214,16 +166,24 @@ public:
         return true;
     }
 
-    // ======================================
+public:
+    static CBFFLayer* create() {
+        auto ret = new CBFFLayer();
+
+        if (ret && ret->init()) {
+            ret->autorelease();
+            return ret;
+        }
+
+        CC_SAFE_DELETE(ret);
+        return nullptr;
+    }
+
     // CALLBACKS
-    // ======================================
 
     void onToggle(CCObject*) {
         g_enabled = !g_enabled;
-
-        updateStatus(
-            g_enabled ? "CBFF enabled" : "CBFF disabled"
-        );
+        updateStatus(g_enabled ? "CBFF enabled" : "CBFF disabled");
     }
 
     void onAggressive(CCObject*) {
@@ -267,12 +227,9 @@ class $modify(CBFFMenuLayer, MenuLayer) {
             return false;
         }
 
-        auto bottomMenu = this->getChildByID(
-            "bottom-menu"
-        );
+        auto bottomMenu = this->getChildByID("bottom-menu");
 
         if (bottomMenu) {
-
             auto sprite = ButtonSprite::create(
                 "CBFF",
                 40,
@@ -296,12 +253,13 @@ class $modify(CBFFMenuLayer, MenuLayer) {
         }
 
         log::info("CBFF initialized!");
-
         return true;
     }
 
     void onOpen(CCObject*) {
-        CBFFLayer::create()->show();
+        if (auto popup = CBFFLayer::create()) {
+            popup->show();
+        }
     }
 };
 
