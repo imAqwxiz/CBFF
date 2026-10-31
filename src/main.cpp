@@ -13,38 +13,48 @@ static std::string g_preset = "Balanced";
 static std::string g_gamemode = "All";
 
 // ==========================================
-// CBFF MENU
+// CBFF POPUP
 // ==========================================
 
-class CBFFLayer : public CCLayerColor {
+class CBFFLayer : public Popup<> {
 protected:
     CCLabelBMFont* m_status = nullptr;
+    CCMenu* m_buttonMenu = nullptr;
 
-    void addTextButton(
+    // --------------------------------------
+    // BUTTON CREATION
+    // --------------------------------------
+
+    void addButton(
         const char* text,
         SEL_MenuHandler callback,
         float x,
         float y,
-        float scale = 0.42f
+        float width = 115.f
     ) {
-        auto label = CCLabelBMFont::create(
+        auto sprite = ButtonSprite::create(
             text,
-            "bigFont.fnt"
+            static_cast<int>(width),
+            true,
+            "goldFont.fnt",
+            "GJ_button_01.png",
+            30.f,
+            0.65f
         );
 
-        label->setScale(scale);
-
-        auto item = CCMenuItemLabel::create(
-            label,
+        auto button = CCMenuItemSpriteExtra::create(
+            sprite,
             this,
             callback
         );
 
-        auto menu = CCMenu::create(item, nullptr);
-        menu->setPosition({x, y});
-
-        this->addChild(menu);
+        button->setPosition({x, y});
+        m_buttonMenu->addChild(button);
     }
+
+    // --------------------------------------
+    // STATUS
+    // --------------------------------------
 
     void updateStatus(const std::string& text) {
         if (m_status) {
@@ -56,7 +66,7 @@ protected:
         g_preset = preset;
 
         updateStatus(
-            ("Selected preset: " + preset).c_str()
+            ("Active preset: " + preset).c_str()
         );
     }
 
@@ -65,7 +75,7 @@ public:
     static CBFFLayer* create() {
         auto ret = new CBFFLayer();
 
-        if (ret && ret->init()) {
+        if (ret && ret->init(360.f, 260.f)) {
             ret->autorelease();
             return ret;
         }
@@ -74,153 +84,138 @@ public:
         return nullptr;
     }
 
-    bool init() override {
-        auto winSize = CCDirector::sharedDirector()->getWinSize();
+    // ======================================
+    // POPUP INITIALIZATION
+    // ======================================
 
-        if (!CCLayerColor::initWithColor(
-            ccc4(0, 0, 0, 175)
-        )) {
-            return false;
-        }
+    bool setup() override {
 
-        this->setContentSize(winSize);
+        this->setTitle("CBFF");
 
-        // Main panel
-        float panelW = std::min(440.f, winSize.width - 24.f);
-        float panelH = std::min(310.f, winSize.height - 24.f);
+        auto size = m_mainLayer->getContentSize();
 
-        auto panel = CCLayerColor::create(
-            ccc4(20, 35, 59, 250),
-            panelW,
-            panelH
+        const float centerX = size.width / 2.f;
+
+        // Main button menu
+        m_buttonMenu = CCMenu::create();
+        m_buttonMenu->setPosition({0.f, 0.f});
+
+        m_mainLayer->addChild(m_buttonMenu);
+
+        // ----------------------------------
+        // STATUS
+        // ----------------------------------
+
+        m_status = CCLabelBMFont::create(
+            "Active preset: Balanced",
+            "bigFont.fnt"
         );
 
-        panel->setPosition({
-            (winSize.width - panelW) / 2.f,
-            (winSize.height - panelH) / 2.f
+        m_status->setScale(0.42f);
+        m_status->setPosition({
+            centerX,
+            size.height - 48.f
         });
 
-        this->addChild(panel);
+        m_mainLayer->addChild(m_status);
 
-        float center = panelW / 2.f;
+        // ----------------------------------
+        // ENABLE / DISABLE
+        // ----------------------------------
 
-        // Header
-        auto title = CCLabelBMFont::create(
-            "CBFF",
+        addButton(
+            g_enabled ? "CBFF: ON" : "CBFF: OFF",
+            menu_selector(CBFFLayer::onToggle),
+            centerX,
+            size.height - 82.f,
+            110.f
+        );
+
+        // ----------------------------------
+        // PRESETS HEADER
+        // ----------------------------------
+
+        auto presetLabel = CCLabelBMFont::create(
+            "PRESETS",
             "goldFont.fnt"
         );
 
-        title->setScale(0.9f);
-        title->setPosition({center, panelH - 30.f});
-        panel->addChild(title);
+        presetLabel->setScale(0.55f);
+        presetLabel->setPosition({
+            centerX,
+            size.height - 113.f
+        });
 
-        auto subtitle = CCLabelBMFont::create(
-            "Click beFore FRAMES",
-            "bigFont.fnt"
-        );
+        m_mainLayer->addChild(presetLabel);
 
-        subtitle->setScale(0.35f);
-        subtitle->setPosition({center, panelH - 52.f});
-        panel->addChild(subtitle);
+        // ----------------------------------
+        // PRESET BUTTONS
+        // ----------------------------------
 
-        // Status
-        m_status = CCLabelBMFont::create(
-            "Selected preset: Balanced",
-            "bigFont.fnt"
-        );
+        const float leftX = centerX - 82.f;
+        const float rightX = centerX + 82.f;
 
-        m_status->setScale(0.38f);
-        m_status->setPosition({center, panelH - 82.f});
-        panel->addChild(m_status);
-
-        // Enable / Disable
-        addTextButton(
-            g_enabled ? "CBFF: ON" : "CBFF: OFF",
-            menu_selector(CBFFLayer::onToggle),
-            center,
-            panelH - 112.f
-        );
-
-        // Presets
-        auto presetTitle = CCLabelBMFont::create(
-            "PRESETS",
-            "bigFont.fnt"
-        );
-
-        presetTitle->setScale(0.45f);
-        presetTitle->setPosition({center, panelH - 145.f});
-        panel->addChild(presetTitle);
-
-        float left = panelW * 0.28f;
-        float right = panelW * 0.72f;
-
-        addTextButton(
+        addButton(
             "AGGRESSIVE",
             menu_selector(CBFFLayer::onAggressive),
-            left,
-            panelH - 178.f
+            leftX,
+            size.height - 145.f
         );
 
-        addTextButton(
+        addButton(
             "BALANCED",
             menu_selector(CBFFLayer::onBalanced),
-            right,
-            panelH - 178.f
+            rightX,
+            size.height - 145.f
         );
 
-        addTextButton(
+        addButton(
             "SAFE",
             menu_selector(CBFFLayer::onSafe),
-            left,
-            panelH - 208.f
+            leftX,
+            size.height - 180.f
         );
 
-        addTextButton(
+        addButton(
             "GD GOD",
             menu_selector(CBFFLayer::onGod),
-            right,
-            panelH - 208.f
+            rightX,
+            size.height - 180.f
         );
 
-        addTextButton(
+        addButton(
             "OBVIOUS CHEATING",
             menu_selector(CBFFLayer::onCheating),
-            center,
-            panelH - 238.f,
-            0.36f
+            centerX,
+            size.height - 215.f,
+            165.f
         );
 
-        // Configuration buttons
-        addTextButton(
+        // ----------------------------------
+        // CONFIGURATION
+        // ----------------------------------
+
+        addButton(
             "CUSTOMIZE ALL",
             menu_selector(CBFFLayer::onCustomizeAll),
-            left,
-            32.f,
-            0.36f
+            centerX - 82.f,
+            20.f,
+            130.f
         );
 
-        addTextButton(
+        addButton(
             "GAMEMODES",
             menu_selector(CBFFLayer::onGamemodes),
-            right,
-            32.f,
-            0.36f
-        );
-
-        // Close button
-        addTextButton(
-            "CLOSE",
-            menu_selector(CBFFLayer::onClose),
-            center,
-            10.f,
-            0.38f
+            centerX + 82.f,
+            20.f,
+            115.f
         );
 
         return true;
     }
 
     // ======================================
-    // BUTTON CALLBACKS
+    // CALLBACKS
     // ======================================
 
     void onToggle(CCObject*) {
@@ -253,15 +248,11 @@ public:
 
     void onCustomizeAll(CCObject*) {
         g_gamemode = "All";
-        updateStatus("Editing: All gamemodes");
+        updateStatus("Editing all gamemodes");
     }
 
     void onGamemodes(CCObject*) {
-        updateStatus("Gamemode configuration selected");
-    }
-
-    void onClose(CCObject*) {
-        this->removeFromParentAndCleanup(true);
+        updateStatus("Gamemode settings");
     }
 };
 
@@ -281,41 +272,36 @@ class $modify(CBFFMenuLayer, MenuLayer) {
         );
 
         if (bottomMenu) {
-            auto label = CCLabelBMFont::create(
+
+            auto sprite = ButtonSprite::create(
                 "CBFF",
-                "goldFont.fnt"
+                40,
+                true,
+                "goldFont.fnt",
+                "GJ_button_01.png",
+                25.f,
+                0.55f
             );
 
-            label->setScale(0.45f);
-
-            auto button = CCMenuItemLabel::create(
-                label,
+            auto button = CCMenuItemSpriteExtra::create(
+                sprite,
                 this,
                 menu_selector(CBFFMenuLayer::onOpen)
             );
 
-            button->setID("cbff-open-button"_spr);
+            button->setID("cbff-open-button");
 
             bottomMenu->addChild(button);
             bottomMenu->updateLayout();
         }
 
-        log::info("CBFF initialized.");
+        log::info("CBFF initialized!");
 
         return true;
     }
 
     void onOpen(CCObject*) {
-        auto scene = CCDirector::sharedDirector()
-            ->getRunningScene();
-
-        if (!scene) return;
-
-        auto menu = CBFFLayer::create();
-
-        if (menu) {
-            scene->addChild(menu, 999);
-        }
+        CBFFLayer::create()->show();
     }
 };
 
