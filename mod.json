@@ -1,17 +1,17 @@
 {
-	"geode": "5.10.1",
-	"gd": {
-		"win": "2.2081",
-		"android": "2.2081",
-		"mac": "2.2081",
-		"ios": "2.2081"
-	},
-	"id": "aqwxiz.cbff",
-	"name": "CBFF",
-	"version": "v2026.10.31",
-	"developer": "aqwxiz",
-	"description": "A mod that makes your inputs be later to prevent death by checking on what frame you will die and delay the click to that frame. Customizable.",
-	"dependencies": {
-		"geode.node-ids": ">=v1.23.3"
-	}
+    "geode": "5.10.1",
+    "gd": {
+        "win": "2.2081",
+        "android": "2.2081",
+        "mac": "2.2081",
+        "ios": "2.2081"
+    },
+    "id": "aqwxiz.cbff",
+    "name": "CBFF",
+    "version": "v2026.10.31",
+    "developer": "aqwxiz",
+    "description": "A Input Buffering mod to prevent deaths. Customizable.",
+    "dependencies": {
+        "geode.node-ids": ">=v1.23.3"
+    }
 }
