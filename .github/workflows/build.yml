@@ -45,7 +45,7 @@ jobs:
       - name: Build CBFF
         uses: geode-sdk/build-geode-mod@main
         with:
-          sdk: v5.10.1
+          sdk: given
           target: ${{ matrix.config.target }}
           combine: true
 
